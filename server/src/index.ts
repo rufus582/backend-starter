@@ -2,6 +2,7 @@ import fastify from 'fastify';
 import express from '@fastify/express';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
+import * as db from './db';
 
 dotenv.config();
 
@@ -13,6 +14,8 @@ server.register(cors, {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 });
+
+db.connectDB();
 
 server.get('/', async (request, reply) => {
   return { message: 'Hello, !' };
