@@ -2,7 +2,8 @@ import fastify from 'fastify';
 import express from '@fastify/express';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
-import * as db from './db';
+import sequelize from './db';
+import { syncDB } from './sync';
 
 dotenv.config();
 
@@ -15,7 +16,18 @@ server.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 });
 
-db.connectDB();
+sequelize.authenticate()
+  .then(() => {
+    console.log('Connection has been established successfully.');
+  })
+  .catch((error) => {
+    console.error('Unable to connect to the database:', error);
+  });
+
+syncDB({
+  alter: false, // alter: true will update all tables with new fields
+  force: false, // force: true will drop all tables if it already exists
+});
 
 server.get('/', async (request, reply) => {
   return { message: 'Hello, !' };
