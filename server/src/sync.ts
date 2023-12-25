@@ -1,6 +1,7 @@
 import { SyncOptions } from "sequelize";
 import sequelize from "./db";
 import { User } from "./models";
+import bcrypt from 'bcrypt';
 
 export function syncDB(options: SyncOptions) {
   sequelize.models.User = User;
@@ -13,12 +14,18 @@ export function syncDB(options: SyncOptions) {
         },
       }).then((user) => {
         if (!user) {
-          User.create({
-            email: 'admin@local.com',
-            name: 'Admin',
-            password: 'admin',
-            role: 'admin',
-          });
+          bcrypt.hash('admin', 10)
+            .then((hash) => {
+              User.create({
+                email: 'admin@local.com',
+                name: 'Admin',
+                password: hash,
+                role: 'admin',
+              });
+            })
+            .catch((error) => {
+              console.error(error);
+            });
         }
       });
     });

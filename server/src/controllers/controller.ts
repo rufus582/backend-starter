@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { verifyAuth } from '../authentication/auth';
 
 export abstract class BaseController {
   protected readonly fastify: FastifyInstance;
@@ -10,10 +11,12 @@ export abstract class BaseController {
   }
 
   registerRoutes(): FastifyInstance {
-    return this.fastify.get(`${this.prefix}`, (request, reply) => this.getAll(request, reply))
-      .post(`${this.prefix}`, (request, reply) => this.create(request, reply))
-      .patch(`${this.prefix}/:id`, (request, reply) => this.update(request, reply))
-      .delete(`${this.prefix}/:id`, (request, reply) => this.delete(request, reply));
+    return this.fastify
+      .get(`${this.prefix}`, verifyAuth, (request, reply) => this.getAll(request, reply))
+      .get(`${this.prefix}/:id`, verifyAuth, (request, reply) => this.getById(request, reply))
+      .post(`${this.prefix}`, verifyAuth, (request, reply) => this.create(request, reply))
+      .patch(`${this.prefix}/:id`, verifyAuth, (request, reply) => this.update(request, reply))
+      .delete(`${this.prefix}/:id`, verifyAuth, (request, reply) => this.delete(request, reply));
   }
 
   abstract create(request: FastifyRequest, reply: FastifyReply): void;

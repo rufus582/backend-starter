@@ -1,5 +1,8 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
+import session from '@fastify/session';
+import cookie from '@fastify/cookie';
+import fastifyPassport from '@fastify/passport';
 import dotenv from 'dotenv';
 import sequelize from './db';
 import { syncDB } from './sync';
@@ -13,6 +16,15 @@ server.register(cors, {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 });
+
+server.register(cookie);
+server.register(session, {
+  secret: process.env.SECRET as string,
+  cookie: { secure: false },
+});
+
+server.register(fastifyPassport.initialize());
+server.register(fastifyPassport.secureSession());
 
 sequelize.authenticate()
   .then(() => {

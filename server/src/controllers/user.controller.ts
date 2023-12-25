@@ -1,25 +1,50 @@
 import { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { User } from '../models';
 import { BaseController } from './controller';
+import bcrypt from 'bcrypt';
+import fastifyPassport, { verifyAuth } from '../authentication/auth';
+
+const SALT_ROUNDS = 10;
 
 export class UserController extends BaseController {
-  public registerRoutes(): FastifyInstance {
-    return super.registerRoutes()
-      .post(`${this.prefix}/login`, (request, reply) => this.login(request, reply))
-      .post(`${this.prefix}/logout`, (request, reply) => this.logout(request, reply));
+  options = {
+    attributes: {
+      exclude: ['password'],
+    }
+  };
+
+  constructor(fastify: FastifyInstance, prefix: string) {
+    super(fastify, prefix);
   }
 
-  login(request: FastifyRequest, reply: FastifyReply) {
-    // TODO: Implement login logic
+  public registerRoutes(): FastifyInstance {
+    return super.registerRoutes()
+      .post(`${this.prefix}/register`, this.create)
+      .post(`${this.prefix}/login`, { preValidation: fastifyPassport.authenticate('local', { authInfo: true }) }, this.login)
+      .post(`${this.prefix}/logout`, verifyAuth, this.logout);
+  }
+
+  login(request: FastifyRequest, reply: FastifyReply): any {
+    const user = {
+      ...(request.user as any).dataValues,
+      password: undefined,
+    }
+    reply.status(200).send(user);
   }
 
   logout(request: FastifyRequest, reply: FastifyReply) {
-    // TODO: Implement logout logic
+    request.logout();
+    reply.status(200).send({ message: 'Logged out successfully!' });
   }
 
   async getAll(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const users = await User.findAll()
+      if((request.user as any).role !== 'admin') {
+        reply.status(403).send({ message: 'You need to be an admin to access this!' });
+        return;
+      }
+
+      const users = await User.findAll(this.options);
       reply.status(200).send(users);
     } catch (error) {
       console.error(error);
@@ -29,8 +54,14 @@ export class UserController extends BaseController {
 
   async getById(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { id } = request.params as any;
-      const user = await User.findByPk(id);
+      let id = +(request.user as any).id;
+
+      // Only admins can access other users
+      if((request.user as any).role === 'admin') {
+        id = +(request.params as any).id;
+      }
+
+      const user = await User.findByPk(id, this.options);
       reply.status(200).send(user);
     } catch(error) {
       console.error(error);
@@ -42,20 +73,23 @@ export class UserController extends BaseController {
     const { email, name, password, role } = request.body as any;
 
     try {
+      // Check if user already exists
       const user = await User.findOne({ where: { email } });
       if(user) {
         reply.status(400).send({ message: 'User already exists!' });
         return;
-      } else {
-        await User.create({
-          email,
-          name,
-          password,
-          role,
-        });
-    
-        reply.status(201).send({ message: 'User created successfully!' });
       }
+
+      // Create user
+      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+      await User.create({
+        email,
+        name,
+        password: hash,
+        role,
+      });
+  
+      reply.status(201).send({ message: 'User created successfully!' });
     } catch (error) {
       console.error(error);
       reply.status(500).send({ message: 'Error creating user!' });
@@ -69,10 +103,19 @@ export class UserController extends BaseController {
       const user = await User.findByPk(id);
     
       if (user) {
+        // Check if email is already in use
+        const duplicateUser = await User.findOne({ where: { email } });
+        if(duplicateUser) {
+          reply.status(400).send({ message: 'Duplicate email address!' });
+          return;
+        }
+
+        // Update user
+        const hash = await bcrypt.hash(password, SALT_ROUNDS);
         await user.update({
           email,
           name,
-          password,
+          password: hash,
           role,
         });
     
@@ -87,7 +130,13 @@ export class UserController extends BaseController {
   }
 
   async delete(request: FastifyRequest, reply: FastifyReply) {
-    const { id } = request.params as any;
+    let id = +(request.user as any).id;
+
+    // Only admins can delete other users
+    if((request.user as any).role === 'admin') {
+      id = +(request.params as any).id;
+    }
+
     try {
       const user = await User.findByPk(id);
       if (user) {
