@@ -1,15 +1,13 @@
 import fastify from 'fastify';
-import express from '@fastify/express';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
 import sequelize from './db';
 import { syncDB } from './sync';
+import { UserController } from './controllers';
 
 dotenv.config();
 
 const server = fastify();
-
-server.register(express);
 
 server.register(cors, {
   origin: '*',
@@ -29,9 +27,7 @@ syncDB({
   force: false, // force: true will drop all tables if it already exists
 });
 
-server.get('/', async (request, reply) => {
-  return { message: 'Hello, !' };
-});
+new UserController(server, "/api/users").registerRoutes();
 
 const port  = process.env.PORT ? +process.env.PORT : 3000;
 server.listen({port}).then(() => { console.log(`Server is listening on port ${port}`); });
