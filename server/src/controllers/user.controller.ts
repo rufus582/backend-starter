@@ -4,8 +4,6 @@ import { BaseController } from './controller';
 import bcrypt from 'bcrypt';
 import fastifyPassport, { verifyAuth } from '../authentication/auth';
 
-const SALT_ROUNDS = 10;
-
 export class UserController extends BaseController {
   options = {
     attributes: {
@@ -81,7 +79,7 @@ export class UserController extends BaseController {
       }
 
       // Create user
-      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+      const hash = await bcrypt.hash(password, process.env.SALT_ROUNDS ?? '10');
       await User.create({
         email,
         name,
@@ -111,7 +109,7 @@ export class UserController extends BaseController {
         }
 
         // Update user
-        const hash = await bcrypt.hash(password, SALT_ROUNDS);
+        const hash = await bcrypt.hash(password, process.env.SALT_ROUNDS ?? '10');
         await user.update({
           email,
           name,

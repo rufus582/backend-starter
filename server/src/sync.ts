@@ -14,7 +14,7 @@ export function syncDB(options: SyncOptions) {
         },
       }).then((user) => {
         if (!user) {
-          bcrypt.hash('admin', 10)
+          bcrypt.hash('admin', process.env.SALT_ROUNDS ?? '10')
             .then((hash) => {
               User.create({
                 email: 'admin@local.com',
