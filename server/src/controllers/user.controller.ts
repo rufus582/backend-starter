@@ -1,20 +1,10 @@
 import { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { User } from '../models';
+import { BaseController } from './controller';
 
-export class UserController {
-  private readonly fastify: FastifyInstance;
-  private readonly prefix: string;
-
-  constructor(fastify: FastifyInstance, prefix: string) {
-    this.fastify = fastify;
-    this.prefix = prefix;
-  }
-
-  public registerRoutes(): void {
-    this.fastify.get(`${this.prefix}`, (request, reply) => this.getAll(request, reply))
-      .post(`${this.prefix}`, (request, reply) => this.create(request, reply))
-      .patch(`${this.prefix}/:id`, (request, reply) => this.update(request, reply))
-      .delete(`${this.prefix}/:id`, (request, reply) => this.delete(request, reply))
+export class UserController extends BaseController {
+  public registerRoutes(): FastifyInstance {
+    return super.registerRoutes()
       .post(`${this.prefix}/login`, (request, reply) => this.login(request, reply))
       .post(`${this.prefix}/logout`, (request, reply) => this.logout(request, reply));
   }
@@ -25,6 +15,27 @@ export class UserController {
 
   logout(request: FastifyRequest, reply: FastifyReply) {
     // TODO: Implement logout logic
+  }
+
+  async getAll(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const users = await User.findAll()
+      reply.status(200).send(users);
+    } catch (error) {
+      console.error(error);
+      reply.status(500).send({ message: 'Error retrieving users!' });
+    }
+  }
+
+  async getById(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { id } = request.params as any;
+      const user = await User.findByPk(id);
+      reply.status(200).send(user);
+    } catch(error) {
+      console.error(error);
+      reply.status(500).send({ message: 'Error retrieving user!' });
+    }
   }
 
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -48,27 +59,6 @@ export class UserController {
     } catch (error) {
       console.error(error);
       reply.status(500).send({ message: 'Error creating user!' });
-    }
-  }
-
-  async getAll(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const users = await User.findAll()
-      reply.status(200).send(users);
-    } catch (error) {
-      console.error(error);
-      reply.status(500).send({ message: 'Error retrieving users!' });
-    }
-  }
-
-  async getById(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const { id } = request.params as any;
-      const user = await User.findByPk(id);
-      reply.status(200).send(user);
-    } catch(error) {
-      console.error(error);
-      reply.status(500).send({ message: 'Error retrieving user!' });
     }
   }
 
